@@ -68,8 +68,10 @@ namespace Bc
                 CheckFlagsZeroParitySign();
                 
                 }},
-            {"LDA", (Data) => { 
-                            
+
+            {"LDA", (Address) => {
+                ushort AddressVal = (ushort)ParseAndCheckNumber(Address, 16);
+                memory[AddressVal] = registers["A"];
             
             }}
         };
@@ -234,13 +236,15 @@ namespace Bc
             return memory[address];
         }
 
-        private static bool CheckNbitNumber(int number, int numberOfBits)
+        private static bool CheckIfNumberIsInRange(int number, int numberOfBits)
         {
             return 0 <= number && number < Math.Pow(2,numberOfBits);
         }
 
         private static int ParseAndCheckNumber(string number, int numberOfBits)
         {
+            //VYŘEŠIT PÍSMENA V ČISLU!!!!!!
+
             number = number.ToUpper();
             int DataVal;
             if (number.EndsWith("H"))
@@ -253,7 +257,7 @@ namespace Bc
                 DataVal = Int32.Parse(number);
             }
 
-            if (!CheckNbitNumber(DataVal, numberOfBits))
+            if (!CheckIfNumberIsInRange(DataVal, numberOfBits))
             {
                 //error msg "Nepsravna hodnota"
                 return 0;

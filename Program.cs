@@ -48,6 +48,8 @@ namespace Bc
             //set2["MOV"]("A", "M");
 
             //set2["LXI"]("b", "3005h");
+            set2["MVI"]("A", "100");
+            set1["LDA"]("20l4H");
 
             foreach (var a in iset.Registers)
             {
