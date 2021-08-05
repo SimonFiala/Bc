@@ -18,7 +18,7 @@ namespace Bc
                 { "D", 0 },
                 { "E", 0 },
                 { "H", 0 },
-                { "L", 0 }
+                { "L", 0 },
             };
         public Dictionary<string, byte> Registers    // property
         {
@@ -40,38 +40,225 @@ namespace Bc
 
         }
 
-        private static Dictionary<short, byte> memory { get; } = new Dictionary<short, byte> { };
+        private static Dictionary<ushort, byte> memory { get; } = new Dictionary<ushort, byte> { };
 
-        public Dictionary<short, byte> Memory
+        public Dictionary<ushort, byte> Memory
         {
             get { return memory; }
         }
 
-
-
-        private static Dictionary<string, Action<string>> set1 = new Dictionary<string, Action<string>>
+        private static Dictionary<string, Action<string>> setOneParam { get; } = new Dictionary<string, Action<string>>
         {
-            {"ADD", (a) => {
-                if (registers.ContainsKey(a))
+            {"ADD", (RM) => {
+                RM = RM.ToUpper();
+                if (registers.ContainsKey(RM))
+                { 
+                    CheckFlagsCarryAuxCarry(registers["A"], registers[RM], '+');
+                    registers["A"] = (byte)(registers["A"] + registers[RM]);
+                } else if (RM == "M")
                 {
-                    flags["C"] = registers["A"] + registers[a] > 255;
-                    registers["A"] = (byte)(registers["A"] + registers[a]);
-
-                    // DODĚLAT!!!! CHYBI SIGN FLAG ATD 
-                    
+                    byte valueFromMemory = GetValueFromMemory();
+                    CheckFlagsCarryAuxCarry(registers["A"], valueFromMemory, '+');
+                    registers["A"] = (byte)(registers["A"] + valueFromMemory);
+                } else
+                {
+                    //error msg "RM neni registr nebo pamet"
+                    return;
                 }
-                }}
+                CheckFlagsZeroParitySign();
+                
+                }},
+            {"LDA", (Data) => { 
+                            
+            
+            }}
         };
-
-
-        private void CheckFlagsZeroAndParity()
+        public Dictionary<string, Action<string>> SetOneParam
         {
+            get { return setOneParam; }
+        }
 
+        private static Dictionary<string, Action<string, string>> setTwoParam { get; } = new Dictionary<string, Action<string, string>>
+        {
+            {"MOV", (RMd, RMs) => {
+                RMd = RMd.ToUpper();
+                RMs = RMs.ToUpper();
+
+                if (registers.ContainsKey(RMd))
+                {
+                    if (registers.ContainsKey(RMs))
+                    {
+                        registers[RMd] = registers[RMs];
+                    } else if(RMs == "M")
+                    {
+                        byte valueFromMemory = GetValueFromMemory();
+                        registers[RMd] = valueFromMemory;
+                    } else
+                    {
+                        //error msg "RMs neni registr nebo pamet"
+                        return;
+                    }
+                } else if (RMd == "M")
+                {
+                    if (registers.ContainsKey(RMs))
+                    {
+                        memory[GetAddresFromHL()] = registers[RMs];
+                    } else if(RMs == "M")
+                    {
+                        //error msg "8085 nepovoluje MOV M, M"
+                        return;
+                    } else
+                    {
+                        //error msg "RMs neni registr"
+                        return;
+                    }
+                } else
+                {
+                    //error msg "RMd neni registr nebo pamet"
+                    return;
+                }
+
+            }},
+
+            {"MVI", (RMd, Data) => {
+                RMd = RMd.ToUpper();
+                byte DataVal = (byte)ParseAndCheckNumber(Data, 8);
+
+                if (registers.ContainsKey(RMd))
+                {
+                   registers[RMd] = DataVal;
+                } else if (RMd == "M")
+                {
+                   memory[GetAddresFromHL()] = DataVal;
+                } else
+                {
+                    //error msg "RMd neni registr nebo pamet"
+                    return;
+                }
+            }},
+
+            {"LXI", (RegPair, Data) => {
+                RegPair = RegPair.ToUpper();
+                ushort DataVal = (ushort)ParseAndCheckNumber(Data,16);
+                if (registers.ContainsKey(RegPair))
+                {
+                    byte lowNibble = (byte)((DataVal & 0xff));
+                    byte highNibble = (byte)((DataVal >> 8) & 0xff);
+                    switch (RegPair)
+                    {
+                        case "B":
+                            registers["B"] = highNibble;
+                            registers["C"] = lowNibble;
+                        break;
+
+                        case "D":
+                            registers["D"] = highNibble;
+                            registers["E"] = lowNibble;
+                        break;
+
+                        case "H":
+                            registers["H"] = highNibble;
+                            registers["L"] = lowNibble;
+                        break;
+
+                        default:
+                            if(RegPair == "C" || RegPair == "E" || RegPair == "L")
+                            {
+                                //error msg "Pary se oznacuji B pro BC, D pro DE etc..."
+                                return;
+                            }
+
+                        break;
+                    }
+                } else
+                {
+                    //error msg "RegPair neni nazev Reg paru"
+                    return;
+                }
+            }}
+
+
+
+        };
+        public Dictionary<string, Action<string, string>> SetTwoParam
+        {
+            get { return setTwoParam; }
+        }
+
+
+
+
+
+
+
+
+
+        // POMOCNE FUNKCE
+
+        private static void CheckFlagsZeroParitySign()
+        {
             flags["Z"] = registers["A"] == 0;
 
             int numberOfOnesInAcc = Convert.ToString(registers["A"], 2).Replace("0", "").Length;
             flags["P"] = numberOfOnesInAcc % 2 == 0;
+
+            flags["S"] = (sbyte)registers["A"] < 0;
         }
 
+
+        private static void CheckFlagsCarryAuxCarry(byte a, byte b, char op)
+        {
+            switch (op)
+            {
+                case '+':
+                    flags["C"] = (a + b) > 255;
+                    flags["AC"] = ((a & 0xF) + (b & 0xF)) > 0xF;
+                    break;
+
+                case '-':
+                    flags["C"] = (a - b) < 0;
+                    flags["AC"] = ((a & 0xF) + (~b & 0xF) + 1) > 0xF;
+                    break;
+            }
+        }
+
+      
+        private static ushort GetAddresFromHL()
+        {
+            return (ushort)((registers["H"] << 8) + registers["L"]);
+        }
+
+        private static byte GetValueFromMemory()
+        {
+            ushort address = GetAddresFromHL();
+            return memory[address];
+        }
+
+        private static bool CheckNbitNumber(int number, int numberOfBits)
+        {
+            return 0 <= number && number < Math.Pow(2,numberOfBits);
+        }
+
+        private static int ParseAndCheckNumber(string number, int numberOfBits)
+        {
+            number = number.ToUpper();
+            int DataVal;
+            if (number.EndsWith("H"))
+            {
+                number = number.Replace("H", String.Empty);
+                DataVal = Convert.ToInt32(number, 16);
+            }
+            else
+            {
+                DataVal = Int32.Parse(number);
+            }
+
+            if (!CheckNbitNumber(DataVal, numberOfBits))
+            {
+                //error msg "Nepsravna hodnota"
+                return 0;
+            }
+            return DataVal;
+        }
     }
 }

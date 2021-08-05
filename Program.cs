@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 
 namespace Bc
 {
@@ -7,9 +8,9 @@ namespace Bc
         static void Main(string[] args)
         {
 
-            byte a = 0x10;
-            byte b = 0xa0;
-            Console.WriteLine($"{(byte)((sbyte)(a + b))}    {(sbyte)(a + b)}\n\n");
+            //byte a = 0x10;
+            //byte b = 0xa0;
+            //Console.WriteLine($"{(byte)(a + b)}    {(sbyte)(a + b)}\n\n");
 
             //byte h = 200;
             //byte l = 56;
@@ -27,9 +28,55 @@ namespace Bc
             //    Console.WriteLine(Convert.ToString((byte)(h + l), 16) + "\n");
             //    Console.WriteLine("no carry\n");
             //}
-            //byte x = 5;
-            //Console.WriteLine(Convert.ToString((x & 0xF) + (x & 0xF), 2));
-            //Console.WriteLine((x & 0xF) + (x & 0xF) > 0xF);
+            //byte x = 0x05;
+            //byte y = 0x07;
+            //Console.WriteLine(Convert.ToString((x & 0xF) + (~y & 0xF)+1, 2));
+            //Console.WriteLine((x & 0xF) + ((~y & 0xF) + 1) > 0xF);
+            //byte h = 0b1100;
+            //byte l = 0x1;
+            //ushort hl = (ushort)((h << 8) + l);
+            //Console.WriteLine(hl);
+
+
+            Instructon_Set iset = new Instructon_Set();
+            var set1 = iset.SetOneParam;
+            var set2 = iset.SetTwoParam;
+
+            //set2["MVI"]("h", "30H");
+            //set2["MVI"]("l", "05H");
+            //set2["MVI"]("M", "640");
+            //set2["MOV"]("A", "M");
+
+            //set2["LXI"]("b", "3005h");
+
+            foreach (var a in iset.Registers)
+            {
+                Console.WriteLine(a.Key + "     " + Convert.ToString(a.Value, 16).ToUpper());
+            }
+            Console.WriteLine("\n");
+            foreach (var b in iset.Flags)
+            {
+                Console.WriteLine(b.Key + "     " + Convert.ToByte(b.Value));
+            }
+            foreach (var c in iset.Memory)
+            {
+                Console.WriteLine(Convert.ToString(c.Key, 16).ToUpper() + "   " + c.Value);
+            }
+
+
+
+            //Dictionary<ushort, byte> memory = new Dictionary<ushort, byte> { };
+            //memory[3005] = (byte)20;
+            //foreach (var x in memory)
+            //{
+            //    Console.WriteLine(x);
+            //}
+            //memory[3005] = (byte)50;
+            //foreach (var x in memory)
+            //{
+            //    Console.WriteLine(x);
+            //}
+
         }
     }
 }
