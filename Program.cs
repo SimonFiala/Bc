@@ -39,14 +39,13 @@ namespace Bc
 
 
             Instructon_Set iset = new Instructon_Set();
+            var set0 = iset.SetZeroParam;
             var set1 = iset.SetOneParam;
             var set2 = iset.SetTwoParam;
 
-            set2["LXI"]("h", "16464");
-            set2["MVI"]("M", "bbh");
-            set2["LXI"]("h", "16465");
-            set2["MVI"]("M", "aah");
-            set1["LHLD"]("4050h");
+            set2["LXI"]("h", "abcdh");
+            set2["LXI"]("d", "6789h");
+            set0["XCHG"]();
 
 
 
@@ -61,7 +60,7 @@ namespace Bc
             }
             foreach (var c in iset.Memory)
             {
-                Console.WriteLine(Convert.ToString(c.Key, 16).ToUpper() + "   " + c.Value);
+                Console.WriteLine(Convert.ToString(c.Key, 16).ToUpper() + "   " + Convert.ToString(c.Value, 16).ToUpper());
             }
 
 

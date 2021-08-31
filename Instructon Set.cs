@@ -48,6 +48,24 @@ namespace Bc
             get { return memory; }
         }
 
+        private static Dictionary<string, Action> setZeroParam { get; } = new Dictionary<string, Action>
+        {
+            {"XCHG", () =>{
+                byte tmp = registers["H"];
+                registers["H"] = registers["D"];
+                registers["D"] = tmp;
+
+                tmp = registers["L"];
+                registers["L"] = registers["E"];
+                registers["E"] = tmp;
+            }}
+        };
+
+        public Dictionary<string, Action> SetZeroParam
+        {
+            get { return setZeroParam; }
+        }
+
         private static Dictionary<string, Action<string>> setOneParam { get; } = new Dictionary<string, Action<string>>
         {
             {"ADD", (RM) => {
@@ -71,15 +89,15 @@ namespace Bc
             }},
 
             {"LDA", (Address) => {
-                ushort AddressVal = (ushort)ParseAndCheckNumber(Address, 16);
-                memory[AddressVal] = registers["A"];
+                ushort parsedAddress = (ushort)ParseAndCheckNumber(Address, 16);
+                memory[parsedAddress] = registers["A"];
             
             }},
 
-            {"LDAX", (R) => {
-                R = R.ToUpper();
+            {"LDAX", (RegPair) => {
+                RegPair = RegPair.ToUpper();
                 byte valueFromMemory = 0;
-                switch (R) {
+                switch (RegPair) {
                     case "B":
                         valueFromMemory = GetValueFromMemory("B");
                         break;
@@ -93,10 +111,38 @@ namespace Bc
                 registers["A"] = valueFromMemory;
             }},
 
-            {"LHLD", (Adress) => {
-                ushort addr = (ushort)ParseAndCheckNumber(Adress,16);
-                registers["L"] =  GetValueFromMemory(addr.ToString());
-                registers["H"] =  GetValueFromMemory((addr + 1).ToString());
+            {"LHLD", (Address) => {
+                ushort parsedAddress = (ushort)ParseAndCheckNumber(Address,16);
+                registers["L"] =  GetValueFromMemory(parsedAddress.ToString());
+                registers["H"] =  GetValueFromMemory((parsedAddress + 1).ToString());
+            }},
+
+            {"STA", (Address) => { 
+                ushort parsedAddress = (ushort)ParseAndCheckNumber(Address,16);
+                memory[parsedAddress] = registers["A"];
+            }},
+
+            {"STAX", (RegPair) => {
+                RegPair = RegPair.ToUpper();
+                ushort address = 0;
+                switch (RegPair) {
+                    case "B":
+                        address = GetAddresFromRegPair("B");
+                        break;
+                    case "D":
+                        address = GetAddresFromRegPair("D");
+                        break;
+                    default:
+                        //error msg: Registr neni B ani D
+                        break;
+                }
+                memory[address] = registers["A"];
+            }},
+
+            {"SHLD", (Address) => {
+                ushort parsedAddress = (ushort)ParseAndCheckNumber(Address,16);
+                memory[parsedAddress] = registers["L"];
+                memory[++parsedAddress] = registers["H"];
             }}
         };
         public Dictionary<string, Action<string>> SetOneParam
@@ -298,11 +344,16 @@ namespace Bc
                 if (!CheckIfNumberIsInRange(DataVal, numberOfBits))
                 {
                     //error msg "Nepsravna hodnota"
-                    return 0;
+                    return -1;
                 }
                 return DataVal;
-            } else
-                return -1;  
+            }
+            else
+            {
+                //error msg "Nepsravna hodnota"
+                return -1;
+            }
+                 
         }
     }
 }
