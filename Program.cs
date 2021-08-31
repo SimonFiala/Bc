@@ -42,14 +42,13 @@ namespace Bc
             var set1 = iset.SetOneParam;
             var set2 = iset.SetTwoParam;
 
-            //set2["MVI"]("h", "30H");
-            //set2["MVI"]("l", "05H");
-            //set2["MVI"]("M", "640");
-            //set2["MOV"]("A", "M");
+            set2["LXI"]("h", "16464");
+            set2["MVI"]("M", "bbh");
+            set2["LXI"]("h", "16465");
+            set2["MVI"]("M", "aah");
+            set1["LHLD"]("4050h");
 
-            //set2["LXI"]("b", "3005h");
-            set2["MVI"]("A", "100");
-            set1["LDA"]("20l4H");
+
 
             foreach (var a in iset.Registers)
             {

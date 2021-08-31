@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Text.RegularExpressions;
 
 namespace Bc
 {
@@ -57,7 +58,7 @@ namespace Bc
                     registers["A"] = (byte)(registers["A"] + registers[RM]);
                 } else if (RM == "M")
                 {
-                    byte valueFromMemory = GetValueFromMemory();
+                    byte valueFromMemory = GetValueFromMemory("H");
                     CheckFlagsCarryAuxCarry(registers["A"], valueFromMemory, '+');
                     registers["A"] = (byte)(registers["A"] + valueFromMemory);
                 } else
@@ -67,12 +68,35 @@ namespace Bc
                 }
                 CheckFlagsZeroParitySign();
                 
-                }},
+            }},
 
             {"LDA", (Address) => {
                 ushort AddressVal = (ushort)ParseAndCheckNumber(Address, 16);
                 memory[AddressVal] = registers["A"];
             
+            }},
+
+            {"LDAX", (R) => {
+                R = R.ToUpper();
+                byte valueFromMemory = 0;
+                switch (R) {
+                    case "B":
+                        valueFromMemory = GetValueFromMemory("B");
+                        break;
+                    case "D":
+                        valueFromMemory = GetValueFromMemory("D");
+                        break;
+                    default:
+                        //error msg: Registr neni B ani D
+                        break;
+                }
+                registers["A"] = valueFromMemory;
+            }},
+
+            {"LHLD", (Adress) => {
+                ushort addr = (ushort)ParseAndCheckNumber(Adress,16);
+                registers["L"] =  GetValueFromMemory(addr.ToString());
+                registers["H"] =  GetValueFromMemory((addr + 1).ToString());
             }}
         };
         public Dictionary<string, Action<string>> SetOneParam
@@ -93,7 +117,7 @@ namespace Bc
                         registers[RMd] = registers[RMs];
                     } else if(RMs == "M")
                     {
-                        byte valueFromMemory = GetValueFromMemory();
+                        byte valueFromMemory = GetValueFromMemory("H");
                         registers[RMd] = valueFromMemory;
                     } else
                     {
@@ -104,7 +128,7 @@ namespace Bc
                 {
                     if (registers.ContainsKey(RMs))
                     {
-                        memory[GetAddresFromHL()] = registers[RMs];
+                        memory[GetAddresFromRegPair("H")] = registers[RMs];
                     } else if(RMs == "M")
                     {
                         //error msg "8085 nepovoluje MOV M, M"
@@ -131,7 +155,7 @@ namespace Bc
                    registers[RMd] = DataVal;
                 } else if (RMd == "M")
                 {
-                   memory[GetAddresFromHL()] = DataVal;
+                   memory[GetAddresFromRegPair("H")] = DataVal;
                 } else
                 {
                     //error msg "RMd neni registr nebo pamet"
@@ -225,15 +249,27 @@ namespace Bc
         }
 
       
-        private static ushort GetAddresFromHL()
+        private static ushort GetAddresFromRegPair(string Reg)
         {
-            return (ushort)((registers["H"] << 8) + registers["L"]);
+            ushort address = Reg switch
+            {
+                "B" => (ushort)((registers["B"] << 8) + registers["C"]),
+                "D" => (ushort)((registers["D"] << 8) + registers["E"]),
+                "H" => (ushort)((registers["H"] << 8) + registers["L"]),
+                _ => Convert.ToUInt16(Reg)
+            };
+
+            return address;
         }
 
-        private static byte GetValueFromMemory()
+        private static byte GetValueFromMemory(string Reg)
         {
-            ushort address = GetAddresFromHL();
-            return memory[address];
+            ushort address = GetAddresFromRegPair(Reg);
+            if (memory.ContainsKey(address))
+            {
+                return memory[address];
+            }
+            return 0;
         }
 
         private static bool CheckIfNumberIsInRange(int number, int numberOfBits)
@@ -243,26 +279,30 @@ namespace Bc
 
         private static int ParseAndCheckNumber(string number, int numberOfBits)
         {
-            //VYŘEŠIT PÍSMENA V ČISLU!!!!!!
-
+            Regex r = new Regex("^[A-F0-9]{1,5}H{0,1}$");
             number = number.ToUpper();
-            int DataVal;
-            if (number.EndsWith("H"))
+            if (r.IsMatch(number))
             {
-                number = number.Replace("H", String.Empty);
-                DataVal = Convert.ToInt32(number, 16);
-            }
-            else
-            {
-                DataVal = Int32.Parse(number);
-            }
+                
+                int DataVal;
+                if (number.EndsWith("H"))
+                {
+                    number = number.Replace("H", String.Empty);
+                    DataVal = Convert.ToInt32(number, 16);
+                }
+                else
+                {
+                    DataVal = Int32.Parse(number);
+                }
 
-            if (!CheckIfNumberIsInRange(DataVal, numberOfBits))
-            {
-                //error msg "Nepsravna hodnota"
-                return 0;
-            }
-            return DataVal;
+                if (!CheckIfNumberIsInRange(DataVal, numberOfBits))
+                {
+                    //error msg "Nepsravna hodnota"
+                    return 0;
+                }
+                return DataVal;
+            } else
+                return -1;  
         }
     }
 }
