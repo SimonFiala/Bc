@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Text.RegularExpressions;
 
 namespace Bc
 {
@@ -39,15 +41,15 @@ namespace Bc
 
 
             Instructon_Set iset = new Instructon_Set();
-            var set0 = iset.SetZeroParam;
-            var set1 = iset.SetOneParam;
-            var set2 = iset.SetTwoParam;
-
-            set2["LXI"]("h", "abcdh");
-            set2["LXI"]("d", "6789h");
-            set0["XCHG"]();
+            //var set0 = iset.SetZeroParam;
+            //var set1 = iset.SetOneParam;
+            //var set2 = iset.SetTwoParam;
 
 
+            iset.ReadLines(@"C:\Users\Šimon Fiala\Desktop\Bc testovaci soubor.txt");
+
+
+            
 
             foreach (var a in iset.Registers)
             {
