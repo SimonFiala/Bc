@@ -1,7 +1,9 @@
-﻿using System;
+﻿
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
+using System.Numerics;
 
 namespace Bc
 {
@@ -14,12 +16,10 @@ namespace Bc
             //byte b = 0xa0;
             //Console.WriteLine($"{(byte)(a + b)}    {(sbyte)(a + b)}\n\n");
 
-            //byte h = 200;
-            //byte l = 56;
-            //byte o = (byte)(h + l);
-            //Console.WriteLine();
-
-
+            // byte h = 200;
+            // byte l = 100;
+            // byte o = (byte)(h + l);
+            // Console.WriteLine(o);
 
             //if(h+l > 255)
             //{
@@ -46,25 +46,25 @@ namespace Bc
             //var set2 = iset.SetTwoParam;
 
 
-            iset.ReadLines(@"C:\Users\Šimon Fiala\Desktop\Bc testovaci soubor.txt");
+            iset.ReadLines(@"asm.txt");
 
 
-            
 
+            System.Console.WriteLine("Registers:");
             foreach (var a in iset.Registers)
             {
                 Console.WriteLine(a.Key + "     " + Convert.ToString(a.Value, 16).ToUpper());
             }
-            Console.WriteLine("\n");
+            Console.WriteLine("\nFlags:");
             foreach (var b in iset.Flags)
             {
                 Console.WriteLine(b.Key + "     " + Convert.ToByte(b.Value));
             }
+            Console.WriteLine("\nMemory:");
             foreach (var c in iset.Memory)
             {
                 Console.WriteLine(Convert.ToString(c.Key, 16).ToUpper() + "   " + Convert.ToString(c.Value, 16).ToUpper());
             }
-
 
 
             //Dictionary<ushort, byte> memory = new Dictionary<ushort, byte> { };

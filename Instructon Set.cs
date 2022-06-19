@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text;
 using System.Text.RegularExpressions;
 
 namespace Bc
@@ -14,7 +13,7 @@ namespace Bc
         }
 
         //-------------REGISTRY-------------
-        private static Dictionary<string, byte> registers { get; } = new Dictionary<string, byte>  
+        private static Dictionary<string, byte> registers { get; } = new Dictionary<string, byte>
             {
                 { "A", 0 },
                 { "B", 0 },
@@ -23,11 +22,12 @@ namespace Bc
                 { "E", 0 },
                 { "H", 0 },
                 { "L", 0 },
-            }; 
-        public Dictionary<string, byte> Registers    
+                { "Temp", 0}
+            };
+        public Dictionary<string, byte> Registers
         {
             get { return registers; }
-            
+
         }
 
         //-------------FLAGS-------------
@@ -40,7 +40,7 @@ namespace Bc
             {"AC",false }
         };
 
-        public Dictionary<string, bool> Flags    
+        public Dictionary<string, bool> Flags
         {
             get { return flags; }
 
@@ -71,6 +71,64 @@ namespace Bc
                 flags["C"] = true;
             }},
 
+            {"RLC", () => {
+                if ((registers["A"] & 128) > 0) 
+                {
+                    registers["A"] = (byte)(registers["A"] << 1);
+                    registers["A"] += 1;
+                    flags["C"] = true;
+                } else {
+                    registers["A"] = (byte)(registers["A"] << 1);
+                    flags["C"] = false;
+                }
+            }},
+
+            {"RRC", () => {
+                if ((registers["A"] & 1) > 0)
+                {
+                    registers["A"] = (byte)(registers["A"] >> 1);
+                    registers["A"] += 128;
+                    flags["C"] = true;
+                } else {
+                    registers["A"] = (byte)(registers["A"] >> 1);
+                    flags["C"] = false;
+                }
+            }},
+
+            {"RAL", () => {
+                if ((registers["A"] & 128) > 0)
+                {
+                    registers["A"] = (byte)(registers["A"] << 1);
+                    registers["A"] += Convert.ToByte(flags["C"]);
+                    flags["C"] = true;
+                } else {
+                    registers["A"] = (byte)(registers["A"] << 1);
+                    registers["A"] += Convert.ToByte(flags["C"]);
+                    flags["C"] = false;
+                }
+            }},
+
+            {"RAR", () => {
+                if ((registers["A"] & 1) > 0)
+                {
+                    registers["A"] = (byte)(registers["A"] >> 1);
+                    registers["A"] += (byte)(Convert.ToByte(flags["C"])*128);
+                    flags["C"] = true;
+                } else {
+                    registers["A"] = (byte)(registers["A"] >> 1);
+                    registers["A"] += (byte)(Convert.ToByte(flags["C"])*128);
+                    flags["C"] = false;
+                }
+            }},
+        
+            {"CMA", () => {
+                registers["A"] = (byte)~registers["A"];
+            }},
+
+            {"CMC", () => {
+                flags["C"] = !flags["C"];
+            }},
+        
         };
 
         public Dictionary<string, Action> SetZeroParam
@@ -94,12 +152,13 @@ namespace Bc
                 } else
                 {
                     //error msg "RM neni registr nebo pamet"
+                    Console.WriteLine( "RM neni registr nebo pamet");
                     return;
                 }
                 CheckFlagsCarryAuxCarry(registers["A"], valueFromParametr, '+', false);
                 registers["A"] += valueFromParametr;
                 CheckFlagsZeroParitySign();
-                
+
             }},
 
             {"ADC", (RM) => {
@@ -116,10 +175,11 @@ namespace Bc
                 } else
                 {
                     //error msg "RM neni registr nebo pamet"
+                    Console.WriteLine( "RM neni registr nebo pamet");
                     return;
                 }
                 CheckFlagsCarryAuxCarry(registers["A"], valueFromParametr, '+', true);
-                registers["A"] = (byte)(registers["A"] + valueFromParametr + carry);
+                registers["A"] += (byte)(valueFromParametr + carry);
                 CheckFlagsZeroParitySign();
             }},
 
@@ -145,7 +205,6 @@ namespace Bc
                 ushort valueFromRegisterPair = 0;
                 ushort HLpairValue = GetValueFromRegisterPair("H");
 
-
                 switch (RegPair) {
                     case "B":
                         valueFromRegisterPair = GetValueFromRegisterPair("B");
@@ -155,12 +214,12 @@ namespace Bc
                         break;
                     default:
                         //error msg: Registr neni B ani D
+                        Console.WriteLine( "Registr neni B ani D");
                         return;
                 }
                 CheckCarryFor16bitNumbers(HLpairValue, valueFromRegisterPair);
                 valueFromRegisterPair += HLpairValue;
-                registers["H"] = (byte)((valueFromRegisterPair >> 8) & 0xff);
-                registers["L"] = (byte)(valueFromRegisterPair & 0xff);
+                saveValueToRegisterPair("H", valueFromRegisterPair);
             }},
 
             {"SUB", (RM) => {
@@ -176,6 +235,7 @@ namespace Bc
                 } else
                 {
                     //error msg "RM neni registr nebo pamet"
+                    Console.WriteLine( "RM neni registr nebo pamet");
                     return;
                 }
                 CheckFlagsCarryAuxCarry(registers["A"], valueFromParametr, '-', false);
@@ -183,10 +243,49 @@ namespace Bc
                 CheckFlagsZeroParitySign();
             }},
 
+            {"SBB", (RM) => {
+                RM = RM.ToUpper();
+                byte valueFromParametr = 0;
+                int carry =  Convert.ToInt32(flags["C"]);
+
+                if (registers.ContainsKey(RM))
+                {
+                    valueFromParametr = registers[RM];
+                } else if (RM == "M")
+                {
+                   valueFromParametr = GetValueFromMemory("H");
+                } else
+                {
+                    //error msg "RM neni registr nebo pamet"
+                    Console.WriteLine( "RM neni registr nebo pamet");
+                    return;
+                }
+                CheckFlagsCarryAuxCarry(registers["A"], valueFromParametr, '-', true);
+                registers["A"] += (byte)(~(valueFromParametr + carry) + 1);
+                CheckFlagsZeroParitySign();
+            }},
+
+            {"SUI", (Data) => {
+                byte DataVal = (byte)ParseAndCheckNumber(Data, 8);
+
+                CheckFlagsCarryAuxCarry(registers["A"], DataVal, '-', false);
+                registers["A"] -= DataVal;
+                CheckFlagsZeroParitySign();
+            }},
+
+            {"SBI", (Data) => {
+                byte DataVal = (byte)ParseAndCheckNumber(Data, 8);
+                int carry =  Convert.ToInt32(flags["C"]);
+
+                CheckFlagsCarryAuxCarry(registers["A"], DataVal, '-', true);
+                registers["A"] -= (byte)(DataVal + carry);
+                CheckFlagsZeroParitySign();
+            }},
+
             {"LDA", (Address) => {
                 ushort parsedAddress = (ushort)ParseAndCheckNumber(Address, 16);
                 memory[parsedAddress] = registers["A"];
-            
+
             }},
 
             {"LDAX", (RegPair) => {
@@ -201,6 +300,7 @@ namespace Bc
                         break;
                     default:
                         //error msg: Registr neni B ani D
+                        Console.WriteLine( "Registr neni B ani D");
                         return;
                 }
                 registers["A"] = valueFromMemory;
@@ -212,7 +312,7 @@ namespace Bc
                 registers["H"] =  GetValueFromMemory((parsedAddress + 1).ToString());
             }},
 
-            {"STA", (Address) => { 
+            {"STA", (Address) => {
                 ushort parsedAddress = (ushort)ParseAndCheckNumber(Address,16);
                 memory[parsedAddress] = registers["A"];
             }},
@@ -229,6 +329,7 @@ namespace Bc
                         break;
                     default:
                         //error msg: Registr neni B ani D
+                        Console.WriteLine( "Registr neni B ani D");
                         break;
                 }
                 memory[address] = registers["A"];
@@ -238,7 +339,201 @@ namespace Bc
                 ushort parsedAddress = (ushort)ParseAndCheckNumber(Address,16);
                 memory[parsedAddress] = registers["L"];
                 memory[++parsedAddress] = registers["H"];
-            }}
+            }},
+
+            {"INR", (RM) => {
+                RM = RM.ToUpper();
+                bool carry = flags["C"];
+                if (registers.ContainsKey(RM))
+                {
+                    CheckFlagsCarryAuxCarry(registers[RM], 1, '+', false);
+                    registers[RM] += 1;
+                    CheckFlagsZeroParitySign();
+                } else if (RM == "M")
+                {
+                    ushort addresInHL = GetValueFromRegisterPair("H");
+                    CheckFlagsCarryAuxCarry(memory[addresInHL], 1, '+', false);
+                    memory[addresInHL] += 1;
+                    CheckFlagsZeroParitySign();
+                } else
+                {
+                    //error msg "RM neni registr nebo pamet"
+                    Console.WriteLine( "RM neni registr nebo pamet");
+                    return;
+                }
+                flags["C"] = carry;
+            }},
+
+            {"INX", (RegPair) => {
+                RegPair = RegPair.ToUpper();
+                if (RegPair == "B" || RegPair == "D" || RegPair == "H"){
+                    ushort val = (ushort)(GetValueFromRegisterPair(RegPair) + 1);
+                    saveValueToRegisterPair(RegPair,val);
+                } else {
+                    // error "RegPair neukazuje na registrovy par"
+                    System.Console.WriteLine("RegPair neukazuje na registrovy par");
+                }
+            }},
+
+            {"DCR", (RM) => {
+                RM = RM.ToUpper();
+                bool carry = flags["C"];
+                if (registers.ContainsKey(RM))
+                {
+                    CheckFlagsCarryAuxCarry(registers[RM], 1, '-', false);
+                    registers[RM] -= 1;
+                    CheckFlagsZeroParitySign();
+                } else if (RM == "M")
+                {
+                    ushort addresInHL = GetValueFromRegisterPair("H");
+                    CheckFlagsCarryAuxCarry(memory[addresInHL], 1, '-', false);
+                    memory[addresInHL] -= 1;
+                    CheckFlagsZeroParitySign();
+                } else
+                {
+                    //error msg "RM neni registr nebo pamet"
+                    Console.WriteLine( "RM neni registr nebo pamet");
+                    return;
+                }
+                flags["C"] = carry;
+            }},
+
+            {"DCX", (RegPair) => {
+                RegPair = RegPair.ToUpper();
+                if (RegPair == "B" || RegPair == "D" || RegPair == "H"){
+                    ushort val = (ushort)(GetValueFromRegisterPair(RegPair) - 1);
+                    saveValueToRegisterPair(RegPair,val);
+                } else {
+                    // error "RegPair neukazuje na registrovy par"
+                    System.Console.WriteLine("RegPair neukazuje na registrovy par");
+                }
+            }},
+
+            {"CMP", (RM) => {
+                RM = RM.ToUpper();
+                byte valueFromParametr = 0;
+
+                if (registers.ContainsKey(RM))
+                {
+                    valueFromParametr = registers[RM];
+                } else if (RM == "M")
+                {
+                   valueFromParametr = GetValueFromMemory("H");
+                } else
+                {
+                    //error msg "RM neni registr nebo pamet"
+                    Console.WriteLine( "RM neni registr nebo pamet");
+                    return;
+                }
+
+                CheckFlagsCarryAuxCarry(registers["A"], valueFromParametr, '-', false);
+                registers["Temp"] = (byte)(registers["A"] + (byte)(~valueFromParametr + 1));
+                CheckFlagsZeroParitySign("Temp");
+            }},
+
+            {"CPI", (Data) => {
+                byte DataVal = (byte)ParseAndCheckNumber(Data, 8);
+
+                CheckFlagsCarryAuxCarry(registers["A"], DataVal, '-', false);
+                registers["Temp"] = (byte)(registers["A"] + (byte)(~DataVal + 1));
+                CheckFlagsZeroParitySign("Temp");
+            }},
+
+            {"ANA", (RM) => {
+                RM = RM.ToUpper();
+                byte valueFromParametr = 0;
+
+
+                if (registers.ContainsKey(RM))
+                {
+                    valueFromParametr = registers[RM];
+                } else if (RM == "M")
+                {
+                    valueFromParametr = GetValueFromMemory("H");
+                } else
+                {
+                    //error msg "RM neni registr nebo pamet"
+                    Console.WriteLine( "RM neni registr nebo pamet");
+                    return;
+                }
+                registers["A"] &= valueFromParametr;
+                CheckFlagsZeroParitySign();
+                flags["C"] = false;
+                flags["AC"] = true;
+            }},
+
+            {"ANI", (Data) => {
+                byte DataVal = (byte)ParseAndCheckNumber(Data, 8);
+
+                registers["A"] &= DataVal;
+                CheckFlagsZeroParitySign();
+                flags["C"] = false;
+                flags["AC"] = true;
+            }},
+
+            {"XRA", (RM) => {
+                RM = RM.ToUpper();
+                byte valueFromParametr = 0;
+
+
+                if (registers.ContainsKey(RM))
+                {
+                    valueFromParametr = registers[RM];
+                } else if (RM == "M")
+                {
+                    valueFromParametr = GetValueFromMemory("H");
+                } else
+                {
+                    //error msg "RM neni registr nebo pamet"
+                    Console.WriteLine( "RM neni registr nebo pamet");
+                    return;
+                }
+                registers["A"] ^= valueFromParametr;
+                CheckFlagsZeroParitySign();
+                flags["C"] = false;
+                flags["AC"] = false;
+            }},
+
+            {"XRI", (Data) => {
+                byte DataVal = (byte)ParseAndCheckNumber(Data, 8);
+
+                registers["A"] ^= DataVal;
+                CheckFlagsZeroParitySign();
+                flags["C"] = false;
+                flags["AC"] = false;
+            }},
+
+            {"ORA", (RM) => {
+                RM = RM.ToUpper();
+                byte valueFromParametr = 0;
+
+
+                if (registers.ContainsKey(RM))
+                {
+                    valueFromParametr = registers[RM];
+                } else if (RM == "M")
+                {
+                    valueFromParametr = GetValueFromMemory("H");
+                } else
+                {
+                    //error msg "RM neni registr nebo pamet"
+                    Console.WriteLine( "RM neni registr nebo pamet");
+                    return;
+                }
+                registers["A"] |= valueFromParametr;
+                CheckFlagsZeroParitySign();
+                flags["C"] = false;
+                flags["AC"] = false;
+            }},
+
+            {"ORI", (Data) => {
+                byte DataVal = (byte)ParseAndCheckNumber(Data, 8);
+
+                registers["A"] |= DataVal;
+                CheckFlagsZeroParitySign();
+                flags["C"] = false;
+                flags["AC"] = false;
+            }},
         };
         public Dictionary<string, Action<string>> SetOneParam
         {
@@ -263,6 +558,7 @@ namespace Bc
                     } else
                     {
                         //error msg "RMs neni registr nebo pamet"
+                        Console.WriteLine( "RMs neni registr nebo pamet");
                         return;
                     }
                 } else if (RMd == "M")
@@ -273,15 +569,18 @@ namespace Bc
                     } else if(RMs == "M")
                     {
                         //error msg "8085 nepovoluje MOV M, M"
+                        Console.WriteLine( "8085 nepovoluje MOV M, M");
                         return;
                     } else
                     {
                         //error msg "RMs neni registr"
+                        Console.WriteLine( "RMs neni registr");
                         return;
                     }
                 } else
                 {
                     //error msg "RMd neni registr nebo pamet"
+                    Console.WriteLine( "RMd neni registr nebo pamet");
                     return;
                 }
 
@@ -300,6 +599,7 @@ namespace Bc
                 } else
                 {
                     //error msg "RMd neni registr nebo pamet"
+                      Console.WriteLine( "RMd neni registr nebo pamet");
                     return;
                 }
             }},
@@ -311,7 +611,7 @@ namespace Bc
                 {
                     byte highNibble = (byte)((DataVal >> 8) & 0xff);
                     byte lowNibble = (byte)((DataVal & 0xff));
-                    
+
                     switch (RegPair)
                     {
                         case "B":
@@ -333,6 +633,7 @@ namespace Bc
                             if(RegPair == "C" || RegPair == "E" || RegPair == "L")
                             {
                                 //error msg "Pary se oznacuji B pro BC, D pro DE etc..."
+                                  Console.WriteLine("Pary se oznacuji B pro BC, D pro DE etc...");
                                 return;
                             }
 
@@ -341,10 +642,10 @@ namespace Bc
                 } else
                 {
                     //error msg "RegPair neni nazev Reg paru"
+                    Console.WriteLine("RegPair neni nazev Reg paru");
                     return;
                 }
             }}
-
 
 
         };
@@ -354,43 +655,80 @@ namespace Bc
         }
 
 
-
-
-
-
-
-
-
         // POMOCNE FUNKCE
 
-        private static void CheckFlagsZeroParitySign()
+        private static void CheckFlagsZeroParitySign(string register = "A")
         {
-            flags["Z"] = registers["A"] == 0;
+            flags["Z"] = registers[register] == 0;
 
-            int numberOfOnesInAcc = Convert.ToString(registers["A"], 2).Replace("0", "").Length;
+            int numberOfOnesInAcc = Convert.ToString(registers[register], 2).Replace("0", "").Length;
             flags["P"] = numberOfOnesInAcc % 2 == 0;
 
-            flags["S"] = (sbyte)registers["A"] < 0;
+            flags["S"] = (sbyte)registers[register] < 0;
         }
 
         private static void CheckFlagsCarryAuxCarry(int a, int b, char op, bool useCarry)
         {
+            int carry = Convert.ToInt32(flags["C"]);
             switch (op)
             {
                 case '+':
-                    flags["C"] = (useCarry == true) ? 
-                        (a + b + Convert.ToInt32(flags["C"])) > 255 : 
+                    flags["C"] = (useCarry == true) ?
+                        (a + b + carry) > 255 :
                         (a + b) > 255;
 
-                    flags["AC"] = (useCarry == true) ? 
-                        ((a & 0xF) + (b & 0xF) + Convert.ToInt32(flags["C"])) > 0xF : 
+                    flags["AC"] = (useCarry == true) ?
+                        ((a & 0xF) + (b & 0xF) + carry) > 0xF :
                         ((a & 0xF) + (b & 0xF)) > 0xF;
                     break;
 
                 case '-':
-                    flags["C"] = (a - b) < 0;
-                    flags["AC"] = ((a & 0xF) + (~b & 0xF) + 1) > 0xF;
+                    flags["C"] = (useCarry == true) ?
+                        (a - b - carry) < 0 :
+                        (a - b) < 0;
+
+                    flags["AC"] = (useCarry == true) ?
+                        ((a & 0xF) + (~(b + carry) & 0xF) + 1) > 0xF :
+                        ((a & 0xF) + (~b & 0xF) + 1) > 0xF;
                     break;
+            }
+        }
+
+        private static void saveValueToRegisterPair(string regPair, int value)
+        {
+            ushort val = (ushort)value;
+            byte highNibble = (byte)((val >> 8) & 0xff);
+            byte lowNibble = (byte)((val & 0xff));
+            switch (regPair)
+            {
+                case "B":
+                    registers["B"] = highNibble;
+                    registers["C"] = lowNibble;
+                    break;
+
+                case "D":
+                    registers["D"] = highNibble;
+                    registers["E"] = lowNibble;
+                    break;
+
+                case "H":
+                    registers["H"] = highNibble;
+                    registers["L"] = lowNibble;
+                    break;
+
+                default:
+                    if (regPair == "C" || regPair == "E" || regPair == "L")
+                    {
+                        //error msg "Pary se oznacuji B pro BC, D pro DE etc..."
+                        Console.WriteLine("Pary se oznacuji B pro BC, D pro DE, H pro HL.");
+                        return;
+                    }
+                    else
+                    {
+                        //error msg "Argument RegPair neoznacuje registrovt par"
+                        Console.WriteLine("Argument RegPair neoznacuje registrovt par");
+                        return;
+                    }
             }
         }
 
@@ -398,7 +736,6 @@ namespace Bc
         {
             flags["C"] = (a + b) > ushort.MaxValue;
         }
-
 
         private static ushort GetValueFromRegisterPair(string Reg)
         {
@@ -425,16 +762,17 @@ namespace Bc
 
         private static bool CheckIfNumberIsInRange(int number, int numberOfBits)
         {
-            return 0 <= number && number < Math.Pow(2,numberOfBits);
+            double range = Math.Pow(2, numberOfBits);
+            return -range <= number && number < range;
         }
 
         private static int ParseAndCheckNumber(string number, int numberOfBits)
         {
-            Regex r = new Regex("^[A-F0-9]{1,5}H{0,1}$");
+            Regex r = new Regex("^[-]{0,1}[A-F0-9]{1,5}H{0,1}$");
             number = number.ToUpper();
             if (r.IsMatch(number))
             {
-                
+
                 int DataVal;
                 if (number.EndsWith("H"))
                 {
@@ -449,6 +787,7 @@ namespace Bc
                 if (!CheckIfNumberIsInRange(DataVal, numberOfBits))
                 {
                     //error msg "Nepsravna hodnota"
+                    Console.WriteLine("Nepsravna hodnota");
                     return 0;
                 }
                 return DataVal;
@@ -456,9 +795,10 @@ namespace Bc
             else
             {
                 //error msg "Nepsravna hodnota"
+                Console.WriteLine("Nepsravna hodnota");
                 return 0;
             }
-                 
+
         }
 
         public void ReadLines(string path)      //DEMO JEN PRO TESTOVANI
@@ -466,15 +806,17 @@ namespace Bc
             StreamReader sr = File.OpenText(path);
             string s;
             string[] line;
-            while((s = sr.ReadLine()) != null)
+            while ((s = sr.ReadLine()) != null)
             {
-                
-                s = Regex.Replace(s, @"([abcdefhlmABCDEFHLM]{1})\s*,\s*", "$1, ").ToUpper();  //odstraneni mezery mezi prvnim parametrem a carkou
 
+                s = Regex.Replace(s, @"([abcdefhlmABCDEFHLM]{1})\s*,\s*", "$1, ").ToUpper();  //odstraneni mezery mezi prvnim parametrem a carkou
+                s = Regex.Replace(s, @"\s*-\s*", " -");
                 line = s.Split(" ").Where(x => !string.IsNullOrWhiteSpace(x)).Select(x => x.Trim()).ToArray();
-                
+
                 switch (line.Length)
                 {
+                    case 0:
+                        break;
                     case 1:
                         setZeroParam[line[0]]();
                         break;
@@ -488,16 +830,19 @@ namespace Bc
                         {
                             line[1] = line[1].Replace(",", "");
                             setTwoParam[line[0]](line[1], line[2]);
-                        } else
-                        {
-                            //error: Ocekala se carka za prvnim parametrem
                         }
-                        
+                        else
+                        {
+                            //error: Ocekavala se carka za prvnim parametrem
+                            Console.WriteLine("Ocekavala se carka za prvnim parametrem");
+                        }
+
                         break;
 
                     default:
 
                         //error: prilis mnoho argumentu
+                        Console.WriteLine("prilis mnoho argumentu");
                         break;
                 }
             }
