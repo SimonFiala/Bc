@@ -15,7 +15,6 @@ namespace Bc
             //byte a = 0x10;
             //byte b = 0xa0;
             //Console.WriteLine($"{(byte)(a + b)}    {(sbyte)(a + b)}\n\n");
-
             // byte h = 200;
             // byte l = 100;
             // byte o = (byte)(h + l);
@@ -46,14 +45,24 @@ namespace Bc
             //var set2 = iset.SetTwoParam;
 
 
+
+
             iset.ReadLines(@"asm.txt");
+            iset.InterpretLines();
 
-
-
+            Console.WriteLine("\nLabels:");
+            foreach (var e in iset.Labels)
+            {
+                Console.WriteLine(e);
+            }
             System.Console.WriteLine("Registers:");
             foreach (var a in iset.Registers)
             {
-                Console.WriteLine(a.Key + "     " + Convert.ToString(a.Value, 16).ToUpper());
+                Console.WriteLine(a.Key + "     " + a.Value.ToString("X2"));
+            }
+            foreach (var f in iset.SpecialRegisters)
+            {
+                Console.WriteLine(f.Key + "     " + f.Value.ToString("X4"));
             }
             Console.WriteLine("\nFlags:");
             foreach (var b in iset.Flags)
@@ -61,10 +70,28 @@ namespace Bc
                 Console.WriteLine(b.Key + "     " + Convert.ToByte(b.Value));
             }
             Console.WriteLine("\nMemory:");
+            int counter = 0;
             foreach (var c in iset.Memory)
             {
-                Console.WriteLine(Convert.ToString(c.Key, 16).ToUpper() + "   " + Convert.ToString(c.Value, 16).ToUpper());
+                if (c != 0)
+                {
+                    Console.WriteLine("0x" + counter.ToString("X4") + " - " + c.ToString("X2"));
+                }
+                counter++;
             }
+            Console.WriteLine("\nTranslated Code:");
+            foreach (var d in iset.TranslatedCode)
+            {
+                Console.WriteLine(d);
+            }
+            // Console.WriteLine("\nCorresponding lines:");
+            // foreach (var g in iset.CorrespondingLinesToMemory)
+            // {
+            //     if (g != 0)
+            //     {
+            //         Console.WriteLine(g);
+            //     }
+            // }
 
 
             //Dictionary<ushort, byte> memory = new Dictionary<ushort, byte> { };
@@ -80,5 +107,6 @@ namespace Bc
             //}
 
         }
+
     }
 }

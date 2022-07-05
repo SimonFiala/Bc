@@ -1,2 +1,4 @@
-cmc
-cmc
+lxi h, 8
+mvi m, 76h
+STC
+rst 10
