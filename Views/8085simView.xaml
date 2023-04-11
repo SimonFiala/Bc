@@ -1,0 +1,155 @@
+﻿<UserControl x:Class="Bc.Views.EditorView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:Bc.Views" 
+             xmlns:viewmodels="clr-namespace:Bc.ViewModels" xmlns:i="clr-namespace:Microsoft.VisualBasic;assembly=Microsoft.VisualBasic"
+             d:DataContext="{d:DesignInstance Type=viewmodels:_8085ViewModel}"
+             mc:Ignorable="d" 
+             d:DesignHeight="450" d:DesignWidth="800">
+    <UserControl.InputBindings>
+        <KeyBinding Modifiers="Control"
+            Key="S"
+            Command="{Binding SaveCommand}" />
+    </UserControl.InputBindings>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="auto"/>
+            <RowDefinition Height="auto"/>
+        </Grid.RowDefinitions>
+        
+        <DockPanel Grid.Row="0" HorizontalAlignment="Stretch">
+            <Button Style="{StaticResource LeftButton}" Command="{Binding SaveCommand}">Save</Button>
+            <Button Style="{StaticResource LeftButton}" Command="{Binding LoadCommand}">Load</Button>
+            <Button Style="{StaticResource LeftButton}">Add Periphery</Button>
+            <Button Style="{StaticResource RightButton}" Command="{Binding StopCommand}" IsEnabled="{Binding IsDebugMode, UpdateSourceTrigger=PropertyChanged}">Stop</Button>
+            <Button Style="{StaticResource RightButton}" Command="{Binding PauseCommand}" IsEnabled="{Binding IsDebugMode, UpdateSourceTrigger=PropertyChanged}">Pause</Button>
+            <Button Style="{StaticResource RightButton}" Command="{Binding ContinueCommand}" IsEnabled="{Binding IsDebugMode, UpdateSourceTrigger=PropertyChanged}">Continue</Button>
+            <Button Style="{StaticResource RightButton}" Command="{Binding StepCommand}">Step</Button> 
+            <Button Style="{StaticResource RightButton}" Command="{Binding RunCommand}">Run</Button>
+            <Button Style="{StaticResource RightButton}" Command="{Binding AssembleCommand}" IsEnabled="{Binding IsNotDebugMode, UpdateSourceTrigger=PropertyChanged}">Assemble</Button>
+        </DockPanel>
+        <Grid Grid.Row="1"  Margin="10">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="auto"/>
+                <ColumnDefinition Width="3*"/>
+                <ColumnDefinition Width="auto"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <Grid Margin="5">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="auto"/>
+                    <ColumnDefinition Width="auto"/>
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="auto"/>
+                    <RowDefinition Height="auto"/>
+                    <RowDefinition Height="auto"/>
+                    <RowDefinition Height="auto"/>
+                    <RowDefinition Height="auto"/>
+                </Grid.RowDefinitions>
+                <TextBlock Text="Registers" FontSize="17" FontWeight="Bold" Grid.ColumnSpan="2"/>
+                <ItemsControl ItemsSource="{Binding RegisterNames}" Margin="3" Grid.Row="1" VerticalAlignment="Center">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <StackPanel Orientation="Vertical">
+                                <TextBlock Text="{Binding}" />
+                            </StackPanel>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <ItemsControl ItemsSource="{Binding RegisterValues}" Grid.Row="1" Grid.Column="1" Margin="3" VerticalAlignment="Center">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <StackPanel Orientation="Vertical">
+                                <TextBlock Text="{Binding}" />
+                            </StackPanel>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <ItemsControl ItemsSource="{Binding SpecialRegisterNames}" Grid.Row="2" Margin="3" VerticalAlignment="Center">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <StackPanel Orientation="Vertical">
+                                <TextBlock Text="{Binding}" />
+                            </StackPanel>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <ItemsControl ItemsSource="{Binding SpecialRegisterValues}" Grid.Column="1" Grid.Row="2" Margin="3" VerticalAlignment="Center">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <StackPanel Orientation="Vertical">
+                                <TextBlock Text="{Binding}" />
+                            </StackPanel>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <TextBlock Text="Flags" FontSize="17" FontWeight="Bold" Grid.Row="3" Grid.ColumnSpan="2"/>
+                <ItemsControl ItemsSource="{Binding FlagsNames}" Grid.Row="4" Margin="3" VerticalAlignment="Center">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <StackPanel Orientation="Vertical">
+                                <TextBlock Text="{Binding}" />
+                            </StackPanel>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <ItemsControl ItemsSource="{Binding FlagsValues}" Grid.Column="2" Grid.Row="4" Margin="3" VerticalAlignment="Center"> 
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <StackPanel Orientation="Vertical">
+                                <TextBlock Text="{Binding}" />
+                            </StackPanel>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </Grid>
+
+            <Grid Grid.Column="1">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+                <TextBlock Text="NameOfTheFile.asm" Grid.Column="1" Margin="2 2 2 5"/>
+                <TextBox Text="{Binding CodeTextBox, UpdateSourceTrigger=PropertyChanged}" AcceptsTab="True" VerticalScrollBarVisibility="auto" MaxHeight="500" MinHeight="500"  Grid.Row="1" Width="auto" HorizontalAlignment="Stretch" FontSize="12" VerticalAlignment="Stretch" AcceptsReturn="True" Padding="2 0">
+                    <TextBox.Style>
+                        <Style TargetType="TextBox">
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding Test}" Value="True">
+                                    <!--<Setter Property=""></Setter>-->
+                                </DataTrigger>
+                            </Style.Triggers>
+                            
+                        </Style>
+                    </TextBox.Style>
+                </TextBox>
+                
+            </Grid>
+
+            <Grid Grid.Column="2">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+                <TextBlock Text="Machine Code" Grid.Column="1" Margin="2 2 2 5"/>
+                <TextBox Text="{Binding MachineCodeTextBox}" Grid.Row="1" Width="auto" VerticalScrollBarVisibility="auto" MaxHeight="500" MinHeight="500" HorizontalAlignment="Stretch" FontSize="12" VerticalAlignment="Stretch" Padding="2 0" IsReadOnly="True"/>
+            </Grid>
+
+            <Grid Grid.Column="3">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+                <TextBlock Text="Memory" Grid.Column="1" Margin="2 2 2 5"/>
+                <TextBox Grid.Row="1" Width="auto" HorizontalAlignment="Stretch" VerticalScrollBarVisibility="auto" MaxHeight="500" MinHeight="500" FontSize="12" VerticalAlignment="Stretch" Padding="2 0" IsReadOnly="True">
+                    Memory will be here
+                </TextBox>
+            </Grid>
+
+        </Grid>
+    </Grid>
+</UserControl>

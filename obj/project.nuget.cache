@@ -1,0 +1,10 @@
+{
+  "version": 2,
+  "dgSpecHash": "Wp+DELPJoDd1v5ZH637lt4R3EfalWPWdeVLaaaih3c7HOoPK12wHGgINA6Y+X89f2JWyc2Mvl39hzWEHC096dA==",
+  "success": true,
+  "projectFilePath": "C:\\Users\\Simon\\source\\repos\\Bc\\Bc.csproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\Simon\\.nuget\\packages\\microsoft.xaml.behaviors.wpf\\1.1.39\\microsoft.xaml.behaviors.wpf.1.1.39.nupkg.sha512"
+  ],
+  "logs": []
+}
